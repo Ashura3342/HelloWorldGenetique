@@ -1,23 +1,22 @@
 package fr.wildcodeschool.helloworldgenetique;
 
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.LinkedList;
 
 public class Population {
-    private String goal;
+    private Chromosome goal;
     private int size;
     private int generationNumber;
     private LinkedList<Chromosome> chromosomes;
 
     public Population(String goal, int size) {
-        this.goal = goal;
+        this.goal = new Chromosome(goal);
         this.size = size;
         this.generationNumber = 0;
         chromosomes = new LinkedList<>();
         while(size-- > 0) {
             Chromosome chromosome = new Chromosome();
-            chromosome.random(this.goal.length());
+            chromosome.random(this.goal.getCode().length());
             chromosomes.add(chromosome);
         }
     }
@@ -31,18 +30,13 @@ public class Population {
     }
 
     public void sort() {
-        this.chromosomes.sort(new Comparator<Chromosome>() {
-            @Override
-            public int compare(Chromosome o1, Chromosome o2) {
-                return o1.getCost() - o2.getCost();
-            }
-        });
+        Collections.sort(this.chromosomes);
         this.chromosomes = new LinkedList<>(this.chromosomes.subList(0, this.size));
     }
 
     public void select() {
         int index = Math.min((this.chromosomes.size() * 2) / 3, this.size);
-        this.chromosomes = new LinkedList<>(this.chromosomes.subList(0, this.size));
+        this.chromosomes = new LinkedList<>(this.chromosomes.subList(0, index));
     }
 
     public void mate() {
@@ -54,38 +48,42 @@ public class Population {
                 random = (int) Math.floor(Math.random() * max);
             }
 
-            Chromosome[] children = this.chromosomes.get(i).mate(this.chromosomes.get(random));
+            Chromosome c1 = this.chromosomes.get(i);
+            Chromosome c2 = this.chromosomes.get(random);
+
+            Chromosome[] children = c1.mate(c2);
             this.chromosomes.push(children[0]);
             this.chromosomes.push(children[1]);
         }
     }
 
-    public boolean mutate(float chance) {
+    public void mutate(float chance) {
        for(Chromosome chromosome : this.chromosomes) {
            chromosome.mutate(chance);
-           chromosome.calcCost(this.goal);
-           if (chromosome.getCode().equals(this.goal)) {
-               return true;
-           }
        }
-       return false;
+    }
+
+    public void evaluate() {
+        for(Chromosome chromosome : this.chromosomes) {
+            chromosome.evaluate(this.goal);
+        }
     }
 
     public void generation() {
         generationNumber = 0;
 
-        do {
+        this.evaluate();
+        while (!this.chromosomes.contains(this.goal)) {
+
             this.generationNumber++;
-            for(int i = 0; i < this.chromosomes.size(); i++) {
-                this.chromosomes.get(i).calcCost(this.goal);
-            }
 
             this.sort();
             this.display();
             this.select();
             this.mate();
-
-        } while(!this.mutate(0.7f));
+            this.mutate(0.7f);
+            this.evaluate();
+        }
 
         this.sort();
         this.display();
